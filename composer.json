@@ -1,9 +1,13 @@
 {
-    "name": "vendor/project",
-    "description": "Project scaffold",
-    "type": "project",
+    "name": "nbj/redis-mock",
+    "description": "Library for mocking Redis",
+    "type": "library",
     "license": "MIT",
-    "require": {},
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "illuminate/support": "^5.6"
+    },
     "require-dev": {
         "phpunit/phpunit": "*",
         "friendsofphp/php-cs-fixer": "*"
