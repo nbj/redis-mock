@@ -8,8 +8,14 @@ use PHPUnit\Framework\TestCase;
 
 class RedisMockTest extends TestCase
 {
+    /**
+     * @var Redis $redis
+     */
     protected $redis;
 
+    /**
+     * Runs before each test
+     */
     public function setUp()
     {
         parent::setUp();
@@ -426,5 +432,112 @@ class RedisMockTest extends TestCase
         $this->assertEquals(0, $this->redis->exists('some-key'));
         $this->assertEquals(0, $this->redis->exists('some-other-key'));
         $this->assertEquals(0, $this->redis->exists('some-third-key'));
+    }
+
+    /** @test */
+    public function zrange_return_an_empty_array_if_key_does_not_exist()
+    {
+        $result = $this->redis->zrange('some-key');
+
+        $this->assertEmpty($result);
+        $this->assertTrue(is_array($result), 'Result of zrange is not an array');
+        $this->assertNotNull($result);
+    }
+
+    /** @test */
+    public function zrange_return_an_empty_array_if_start_is_larger_than_the_number_of_members_in_the_set()
+    {
+        $this->redis->zincrby('some-key', 1, 'memberA');
+        $this->redis->zincrby('some-key', 1, 'memberB');
+        $this->redis->zincrby('some-key', 1, 'memberC');
+
+        $result = $this->redis->zrange('some-key', 4, -1);
+
+        $this->assertEmpty($result);
+        $this->assertTrue(is_array($result), 'Result of zrange is not an array');
+        $this->assertNotNull($result);
+    }
+
+    /** @test */
+    public function zrange_return_an_empty_array_if_start_is_larger_than_end()
+    {
+        $this->redis->zincrby('some-key', 1, 'memberA');
+        $this->redis->zincrby('some-key', 1, 'memberB');
+        $this->redis->zincrby('some-key', 1, 'memberC');
+
+        $result = $this->redis->zrange('some-key', 2, 0);
+
+        $this->assertEmpty($result);
+        $this->assertTrue(is_array($result), 'Result of zrange is not an array');
+        $this->assertNotNull($result);
+    }
+
+    /** @test */
+    public function zrange_returns_all_member_for_a_specific_key()
+    {
+        $this->redis->zincrby('some-key', 1, 'memberB');
+        $this->redis->zincrby('some-key', 1, 'memberC');
+        $this->redis->zincrby('some-key', 1, 'memberC');
+        $this->redis->zincrby('some-key', 1, 'memberC');
+        $this->redis->zincrby('some-key', 1, 'memberB');
+        $this->redis->zincrby('some-key', 1, 'memberA');
+
+        $result = $this->redis->zrange('some-key');
+
+        $this->assertCount(3, $result);
+        $this->assertEquals('memberC', reset($result));
+    }
+
+    /** @test */
+    public function zrange_returns_all_member_for_a_specific_key_with_their_score()
+    {
+        $this->redis->zincrby('some-key', 1, 'memberB');
+        $this->redis->zincrby('some-key', 1, 'memberC');
+        $this->redis->zincrby('some-key', 1, 'memberC');
+        $this->redis->zincrby('some-key', 1, 'memberB');
+        $this->redis->zincrby('some-key', 1, 'memberA');
+
+        $result = $this->redis->zrange('some-key', 0, -1, true);
+
+        $this->assertCount(6, $result);
+
+        $this->assertEquals('memberB', array_shift($result));
+        $this->assertEquals(2, array_shift($result));
+
+        $this->assertEquals('memberC', array_shift($result));
+        $this->assertEquals(2, array_shift($result));
+
+        $this->assertEquals('memberA', array_shift($result));
+        $this->assertEquals(1, array_shift($result));
+    }
+
+    /** @test */
+    public function zadd_updates_or_sets_a_score_for_a_member_on_a_key()
+    {
+        $this->redis->zincrby('some-key', 1, 'memberA');
+        $this->redis->zincrby('some-key', 1, 'memberA');
+        $this->redis->zincrby('some-key', 1, 'memberA');
+        $this->assertEquals(3, $this->redis->zscore('some-key', 'memberA'));
+
+        $this->redis->zadd('some-key', 5, 'memberA');
+
+        $this->assertEquals(5, $this->redis->zscore('some-key', 'memberA'));
+    }
+
+    /** @test */
+    public function zadd_returns_0_if_it_updates_an_existing_member()
+    {
+        $this->redis->zincrby('some-key', 1, 'memberA');
+        $result = $this->redis->zadd('some-key', 5, 'memberA');
+
+        $this->assertEquals(0, $result);
+    }
+
+    /** @test */
+    public function zadd_returns_1_if_it_sets_a_new_member()
+    {
+        $result = $this->redis->zadd('some-key', 5, 'memberA');
+
+        $this->assertEquals(1, $result);
     }
 }

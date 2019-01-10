@@ -81,11 +81,9 @@ use Closure;
  * @method array sscan($key, $cursor, array $options = null)
  * @method array sunion(array $keys)
  * @method int sunionstore($destination, array $keys)
- * @method int zadd($key, array $membersAndScoresDictionary)
  * @method int zcard($key)
  * @method string zcount($key, $min, $max)
  * @method int zinterstore($destination, array $keys, array $options = null)
- * @method array zrange($key, $start, $stop, array $options = null)
  * @method array zrangebyscore($key, $min, $max, array $options = null)
  * @method int zrank($key, $member)
  * @method int zremrangebyrank($key, $start, $stop)
@@ -272,6 +270,78 @@ class Redis
         unset($this->storedSetCache[$key][$member]);
 
         return 1;
+    }
+
+    /**
+     * Sets or updates a members score for a key
+     *
+     * @param string $key
+     * @param int $score
+     * @param string $member
+     *
+     * @return int
+     */
+    public function zadd($key, $score, $member)
+    {
+        $returnValue = 1;
+
+        if (isset($this->storedSetCache[$key][$member])) {
+            $returnValue = 0;
+        }
+
+        $this->storedSetCache[$key][$member] = $score;
+
+        return $returnValue;
+    }
+
+    /**
+     * Gets a range of members with or without their scores
+     *
+     * @param string $key
+     * @param int $start
+     * @param int $end
+     * @param bool $withScores
+     *
+     * @return array
+     */
+    public function zrange($key, $start = 0, $end = -1, $withScores = false)
+    {
+        if (!isset($this->storedSetCache[$key])) {
+            return [];
+        }
+
+        if ($start > count($this->storedSetCache[$key])) {
+            return [];
+        }
+
+        $indices = $this->getIndices($start, $end, count($this->storedSetCache[$key]));
+
+        if ($indices['start'] > $indices['end']) {
+            return [];
+        }
+
+        uasort($this->storedSetCache[$key], function ($a, $b) {
+            if ($a == $b) {
+                return 0;
+            }
+
+            return $a > $b ? -1 : 1;
+        });
+
+        $members = array_slice(array_keys($this->storedSetCache[$key]), $indices['start'], $indices['end']);
+
+        if (!$withScores) {
+            return $members;
+        }
+
+        $result = [];
+
+        foreach ($members as $member) {
+            array_push($result, $member);
+            array_push($result, $this->storedSetCache[$key][$member]);
+        }
+
+        return $result;
     }
 
     /**
@@ -598,5 +668,35 @@ class Redis
         }
 
         return null;
+    }
+
+    /**
+     * Gets the indices based on start, end and length of a set
+     *
+     * @param int $start
+     * @param int $end
+     * @param int $length
+     *
+     * @return array
+     */
+    protected function getIndices($start, $end, $length)
+    {
+        return [
+            'start' => $this->normalizeIndex($start, $length),
+            'end'   => $this->normalizeIndex($end, $length) + 1
+        ];
+    }
+
+    /**
+     * Normalizes an index to work with redis
+     *
+     * @param int $offset
+     * @param int $length
+     *
+     * @return int
+     */
+    protected function normalizeIndex($offset, $length)
+    {
+        return $offset >= 0 ? $offset : $length + $offset;
     }
 }
