@@ -16,7 +16,7 @@ class RedisMockTest extends TestCase
     /**
      * Runs before each test
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
