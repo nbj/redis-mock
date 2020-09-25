@@ -699,4 +699,16 @@ class Redis
     {
         return $offset >= 0 ? $offset : $length + $offset;
     }
+
+    /**
+     * non-blocking redis funnel
+     *
+     * @param string $name
+     *
+     * @return ConcurrencyLimiterBuilder
+     */
+    public static function funnel($name)
+    {
+        return new ConcurrencyLimiterBuilder();
+    }
 }

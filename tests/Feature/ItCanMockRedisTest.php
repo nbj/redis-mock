@@ -540,4 +540,34 @@ class RedisMockTest extends TestCase
 
         $this->assertEquals(1, $result);
     }
+
+    /** @test */
+    public function it_can_execute_funneled_methods()
+    {
+        Redis::funnel("myKey")
+            ->limit(1)
+            ->releaseAfter(60)
+            ->block(5)
+            ->then(function (){
+                $this->assertTrue(true); // We entered the correct closure
+            }, function ($e) {
+                $this->assertTrue(false); // We entered the wrong closure
+            });
+    }
+
+    /** @test */
+    public function it_can_catch_funnel_exceptions_and_run_error_code()
+    {
+        Redis::funnel("myKey")
+            ->limit(1)
+            ->releaseAfter(60)
+            ->block(5)
+            ->then(function (){
+                throw new \Exception("Exception to enter failure closure");
+
+                $this->assertTrue(false);
+            }, function ($e) {
+                $this->assertTrue(true); // We entered the wrong closure
+            });
+    }
 }
