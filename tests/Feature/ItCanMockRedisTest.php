@@ -550,7 +550,7 @@ class RedisMockTest extends TestCase
             ->block(5)
             ->then(function (){
                 $this->assertTrue(true); // We entered the correct closure
-            }, function ($e) {
+            }, function ($exception) {
                 $this->assertTrue(false); // We entered the wrong closure
             });
     }
@@ -566,8 +566,8 @@ class RedisMockTest extends TestCase
                 throw new \Exception("Exception to enter failure closure");
 
                 $this->assertTrue(false);
-            }, function ($e) {
-                $this->assertTrue(true); // We entered the wrong closure
+            }, function ($exception) {
+                $this->assertTrue(true); // We entered the correct closure
             });
     }
 }

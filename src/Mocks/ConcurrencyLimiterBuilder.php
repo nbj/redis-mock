@@ -21,12 +21,12 @@ class ConcurrencyLimiterBuilder
     {
         try {
             return $callback();
-        } catch (Exception $e) {
+        } catch (Exception $exception) {
             if ($failure) {
-                return $failure($e);
+                return $failure($exception);
             }
 
-            throw $e;
+            throw $exception;
         }
     }
 
